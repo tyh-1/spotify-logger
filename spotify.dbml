@@ -1,0 +1,32 @@
+// 定義 Table
+Table logs {
+  id int [pk, increment]
+  track_id text [ref: > tracks.id]
+  played_at datetime 
+}
+
+Table tracks {
+  id text [pk]
+  track text
+  album_id text [ref: > albums.id]
+  duration_ms int
+  track_number int
+}
+
+Table track_artists{
+  track_id text [pk, ref: > tracks.id]
+  artist_id text [pk, ref: > artists.id]
+  artist_order int
+}
+
+Table artists{
+  id text [pk]
+  artist text
+}
+
+Table albums{
+  id text [pk]
+  album text
+  total_tracks int
+  release_date datetime
+}

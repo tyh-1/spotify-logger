@@ -1,0 +1,11 @@
+data/
+*.db
+
+env/
+.vscode/
+myenv/
+__pycache__/
+
+debug/
+
+
