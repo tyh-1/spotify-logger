@@ -14,7 +14,7 @@ else:
     df = spotify_refresh_tok_flow.fetch_recently_played(my_config['refresh_token'])
 
 
-file_nm = "data/1117_3.csv"
+file_nm = "data/1118.csv"
 if os.path.exists(file_nm): raise FileExistsError
 df.to_csv(file_nm)
 

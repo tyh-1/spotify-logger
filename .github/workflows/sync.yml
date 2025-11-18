@@ -1,0 +1,33 @@
+name: Sync Spotify Data
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'  # 每 3 小時執行
+  workflow_dispatch:  # 可以手動觸發
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run sync script
+        run: python -m main
+        env:
+          GITHUB_ACTIONS: 'true'
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}

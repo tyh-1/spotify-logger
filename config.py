@@ -20,7 +20,7 @@ REQUIRED_GITHUB_ACTIONS = ["REFRESH_TOKEN"]
 # REQUIRED_TURSO_VARS = ["TURSO_DB_URL", "TURSO_DB_TOKEN"]
 
 # 有連接 supabase 要有的
-REQUIRED_SUPABASE_VARS = ['supabase_password']
+REQUIRED_SUPABASE_VARS = ['SUPABASE_PASSWORD']
 
 def get_config(db_type = None):
 
@@ -45,7 +45,7 @@ def get_config(db_type = None):
         # "turso_db_token": os.getenv("TURSO_DB_TOKEN"),
 
         # supabase
-        'supabase_password': os.getenv('supabase_password'),
+        'supabase_password': os.getenv('SUPABASE_PASSWORD'),
 
         # env
         "is_cloud": is_github_actions
