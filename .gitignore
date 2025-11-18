@@ -2,10 +2,10 @@ data/
 *.db
 
 env/
+.venv/
 .vscode/
 myenv/
 __pycache__/
 
 debug/
-
-
+requirements.txt

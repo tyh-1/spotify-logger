@@ -1,11 +1,20 @@
-from spotify_log import spotify_recent, sqlite_utils
+from spotify_log import sqlite_utils
 import os, pandas as pd
+from config import get_config
+
+my_config = get_config()
 
 # 從 api 抓聆聽資料
-tok = spotify_recent.get_valid_token()
-df, dim = spotify_recent.fetch_recently_played(tok)
-df['played_at'] = pd.to_datetime(df['played_at'], errors='coerce') 
-file_nm = "data/1111.csv"
+if not my_config["is_cloud"]:
+    from spotify_log import spotify_auth_code_flow
+    tok = spotify_auth_code_flow.get_valid_token()
+    df = spotify_auth_code_flow.fetch_recently_played(tok)
+else:
+    from spotify_log import spotify_refresh_tok_flow
+    df = spotify_refresh_tok_flow.fetch_recently_played(my_config['refresh_token'])
+
+
+file_nm = "data/1117_3.csv"
 if os.path.exists(file_nm): raise FileExistsError
 df.to_csv(file_nm)
 
