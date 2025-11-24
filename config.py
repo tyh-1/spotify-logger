@@ -20,7 +20,7 @@ REQUIRED_GITHUB_ACTIONS = ["REFRESH_TOKEN"]
 # REQUIRED_TURSO_VARS = ["TURSO_DB_URL", "TURSO_DB_TOKEN"]
 
 # 有連接 supabase 要有的
-REQUIRED_SUPABASE_VARS = ['SUPABASE_PASSWORD']
+REQUIRED_SUPABASE_VARS = ['SUPABASE_URI']
 
 def get_config(db_type = None):
 
@@ -45,7 +45,7 @@ def get_config(db_type = None):
         # "turso_db_token": os.getenv("TURSO_DB_TOKEN"),
 
         # supabase
-        'supabase_password': os.getenv('SUPABASE_PASSWORD'),
+        'supabase_uri': os.getenv('SUPABASE_URI'),
 
         # env
         "is_cloud": is_github_actions
@@ -91,7 +91,7 @@ def get_db_connection():
     if config['use_supabase']:
         print("連線到 supabase")
         from sqlalchemy import create_engine
-        DATABASE_URL = f"postgresql://postgres.wmacdeqyonqhpcxbdpzt:{config['supabase_password']}@aws-1-ap-south-1.pooler.supabase.com:6543/postgres"
+        DATABASE_URL = config['supabase_uri']
         engine = create_engine(DATABASE_URL)
         return engine.begin()
     
