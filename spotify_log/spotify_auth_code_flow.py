@@ -198,12 +198,4 @@ def fetch_recently_played(tok):
 
 if __name__ == "__main__":
     tok = get_valid_token()
-    df, dim = fetch_recently_played(tok)
-    file_nm = "data/1107.csv"
-    if os.path.exists(file_nm): raise FileExistsError
-    df.to_csv(file_nm)
-    print(df)
-    print(dim)
-
-    
 
