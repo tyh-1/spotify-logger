@@ -60,6 +60,15 @@ def create_tables_if_not_exists():
     );
     """))
 
+    conn.execute(text("""
+    CREATE TABLE IF NOT EXISTS cache (
+      track_id TEXT NOT NULL,
+      played_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+                      
+      PRIMARY KEY (track_id, played_at)
+    );
+    """))
+
 
 def process_datetime_for_sql(s: pd.Series, type):
     """
@@ -116,6 +125,36 @@ def split_df(df: pd.DataFrame):
     return {"logs": df_logs, "tracks": df_tracks, "albums": df_albums, "artists": df_artists, "track_artists":df_track_artists}  
 
 
+def should_update_db(df):
+    """
+    跟 cache table 比對，看有沒有新的聆聽紀錄，若有 return True.
+    """
+    df["played_at"] = process_datetime_for_sql(df["played_at"], type = "datetime")
+
+
+    try:
+        with get_db_connection() as conn:
+            # 讀取最新一筆
+            cache = pd.read_sql(
+                "SELECT played_at FROM cache ORDER BY played_at DESC LIMIT 1", 
+                conn
+            )
+  
+        if cache.empty: return True  # 第一次執行時，cache table 是空的
+        cache_time = pd.to_datetime(cache.loc[0, "played_at"])
+        df_time = pd.to_datetime(df.loc[0, "played_at"])
+        
+        if cache_time == df_time:
+            print("No new tracks, skip update")
+            return False
+        else:
+            return True
+
+    except Exception as e:
+        print(f"讀取 cache table 發生錯誤: {e}")
+        return True
+
+
 def postgres_upsert(table, conn, keys, data_iter):
     from sqlalchemy.dialects.postgresql import insert
     from sqlalchemy import MetaData, Table
@@ -152,6 +191,7 @@ def insert_data_from_df(df: pd.DataFrame):
     df["release_date"] = process_datetime_for_sql(df["release_date"], type = "date")
     
     tables = split_df(df)
+    tables["cache"] = tables["logs"]
 
     try:
         with get_db_connection() as conn:
@@ -161,6 +201,11 @@ def insert_data_from_df(df: pd.DataFrame):
             for table_name in ["albums", "artists", "tracks", "track_artists", "logs"]:
               tables[table_name].to_sql(table_name, conn, if_exists="append", index=False, method = postgres_upsert)
               print(f"{table_name} 寫入成功")
+
+            # 清空舊的 cache，插入新的 50 筆
+            conn.execute(text("DELETE FROM cache"))
+            tables["cache"].to_sql("cache", conn, if_exists="append", index=False)
+            print("cache 更新成功")
 
     except Exception as e:
         print(f"寫入 {table_name} 發生資料庫錯誤: {e}")

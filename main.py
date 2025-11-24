@@ -1,5 +1,5 @@
 from spotify_log import sqlite_utils
-import os, pandas as pd
+import pandas as pd
 from config import get_config
 
 my_config = get_config()
@@ -15,10 +15,12 @@ else:
 
 # 如果在本地，就順便存 csv. 提供 debug 素材
 if not my_config["is_cloud"]:
-    file_nm = "data/1118.csv"
-    if os.path.exists(file_nm): raise FileExistsError
-    df.to_csv(file_nm)
+    from spotify_log import utils
+    file_path  = utils.get_csv_path()
+    df.to_csv(file_path)
 
 # 更新到 db
 sqlite_utils.create_tables_if_not_exists()
-sqlite_utils.insert_data_from_df(df)
+should_update = sqlite_utils.should_update_db(df)
+if should_update:
+    sqlite_utils.insert_data_from_df(df)

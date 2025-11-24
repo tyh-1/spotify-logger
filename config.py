@@ -93,7 +93,7 @@ def get_db_connection():
         from sqlalchemy import create_engine
         DATABASE_URL = f"postgresql://postgres.wmacdeqyonqhpcxbdpzt:{config['supabase_password']}@aws-1-ap-south-1.pooler.supabase.com:6543/postgres"
         engine = create_engine(DATABASE_URL)
-        return engine.connect()
+        return engine.begin()
     
     # if not config['use_turso']:
     #     print("連線到本地 SQLite")
