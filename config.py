@@ -89,7 +89,7 @@ def get_db_connection():
     config = get_config()
 
     if config['use_supabase']:
-        print("連線到 supabase")
+        # print("連線到 supabase")
         from sqlalchemy import create_engine
         DATABASE_URL = config['supabase_uri']
         engine = create_engine(DATABASE_URL)

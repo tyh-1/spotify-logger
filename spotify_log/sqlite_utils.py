@@ -1,6 +1,7 @@
 import pandas as pd
 from config import get_db_connection
 from sqlalchemy import text
+import time
 
 
 def create_tables_if_not_exists():
@@ -60,11 +61,20 @@ def create_tables_if_not_exists():
     );
     """))
 
+    # 方便用，不符合 atomic
     conn.execute(text("""
     CREATE TABLE IF NOT EXISTS cache (
+      artist TEXT NOT NULL,   -- 逗號分隔的
+      artist_id TEXT NOT NULL,
+      track TEXT NOT NULL,
       track_id TEXT NOT NULL,
+      album TEXT,
+      album_id TEXT,
+      total_tracks INTEGER,
+      duration_ms INTEGER NOT NULL,
       played_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-                      
+      track_number INTEGER,
+      release_date DATE,
       PRIMARY KEY (track_id, played_at)
     );
     """))
@@ -127,32 +137,39 @@ def split_df(df: pd.DataFrame):
 
 def should_update_db(df):
     """
-    跟 cache table 比對，看有沒有新的聆聽紀錄，若有 return True.
+    把新的聆聽紀錄加進 cache table. 當 cahce table 蒐集到一定的量(e.g., 超過 50 筆)，再 flush 進 5 個 tables.
+    Return False 或 cache_df
     """
-    df["played_at"] = process_datetime_for_sql(df["played_at"], type = "datetime")
-
-
     try:
         with get_db_connection() as conn:
-            # 讀取最新一筆
+            # 讀取整個 cache
             cache = pd.read_sql(
-                "SELECT played_at FROM cache ORDER BY played_at DESC LIMIT 1", 
+                "SELECT * FROM cache ORDER BY played_at DESC", 
                 conn
             )
-  
-        if cache.empty: return True  # 第一次執行時，cache table 是空的
-        cache_time = pd.to_datetime(cache.loc[0, "played_at"])
-        df_time = pd.to_datetime(df.loc[0, "played_at"])
-        
-        if cache_time == df_time:
-            print("No new tracks, skip update")
-            return False
-        else:
-            return True
+
+            # 型別轉換
+            if not cache.empty:
+                cache["played_at"] = pd.to_datetime(cache["played_at"])
+                cache["release_date"] = pd.to_datetime(cache["release_date"])
+            
+            # 合併新舊資料
+            combined = pd.concat([cache, df], ignore_index=True)
+            
+            # 判斷是否達到 flush 門檻
+            if combined.shape[0] >= 50: 
+                return combined    # 時間欄位交給 insert_data_from_df 處理. 清空快取也那時候處理
+            else:
+                conn.execute(text("DELETE FROM cache"))
+                conn.commit()
+                df["played_at"] = process_datetime_for_sql(df["played_at"], type = "datetime")
+                df["release_date"] = process_datetime_for_sql(df["release_date"], type = "date")
+                combined.to_sql("cache", conn, if_exists="append", index=False)
+                return False
 
     except Exception as e:
-        print(f"讀取 cache table 發生錯誤: {e}")
-        return True
+        print(f"讀寫 cache table 發生錯誤: {e}")
+        raise
 
 
 def postgres_upsert(table, conn, keys, data_iter):
@@ -191,24 +208,23 @@ def insert_data_from_df(df: pd.DataFrame):
     df["release_date"] = process_datetime_for_sql(df["release_date"], type = "date")
     
     tables = split_df(df)
-    tables["cache"] = tables["logs"]
 
     try:
         with get_db_connection() as conn:
-            # conn.execute("PRAGMA foreign_keys = ON")
 
             # 先寫 parent table
             for table_name in ["albums", "artists", "tracks", "track_artists", "logs"]:
+              start = time.time()
               tables[table_name].to_sql(table_name, conn, if_exists="append", index=False, method = postgres_upsert)
-              print(f"{table_name} 寫入成功")
+              print(f"  upsert into {table_name}: {time.time()-start:.2f}s")
 
-            # 清空舊的 cache，插入新的 50 筆
+            start = time.time()
             conn.execute(text("DELETE FROM cache"))
-            tables["cache"].to_sql("cache", conn, if_exists="append", index=False)
-            print("cache 更新成功")
+            print(f"清空 cache: {time.time()-start:.2f}s")
 
     except Exception as e:
         print(f"寫入 {table_name} 發生資料庫錯誤: {e}")
+        raise
 
 
 
