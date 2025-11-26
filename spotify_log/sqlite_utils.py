@@ -141,30 +141,35 @@ def should_update_db(df):
     Return False 或 cache_df
     """
     try:
+        df["played_at"] = process_datetime_for_sql(df["played_at"], type = "datetime")
+        df["release_date"] = process_datetime_for_sql(df["release_date"], type = "date")
         with get_db_connection() as conn:
             # 讀取整個 cache
-            cache = pd.read_sql(
-                "SELECT * FROM cache ORDER BY played_at DESC", 
-                conn
-            )
+            cache = pd.read_sql("SELECT * FROM cache ORDER BY played_at DESC", conn)
 
-            # 型別轉換
             if not cache.empty:
+                # 型別轉換、過濾"新資料"
                 cache["played_at"] = pd.to_datetime(cache["played_at"])
                 cache["release_date"] = pd.to_datetime(cache["release_date"])
+                latest_time = cache['played_at'].max()
+                new_data = df[df['played_at'] > latest_time].copy()
+            else:
+                new_data = df.copy()
+
+            if len(new_data) == 0:
+                print("無新的聆聽紀錄")
+                return False
             
             # 合併新舊資料
-            combined = pd.concat([cache, df], ignore_index=True)
+            combined = pd.concat([cache, new_data], ignore_index=True)
             
             # 判斷是否達到 flush 門檻
             if combined.shape[0] >= 50: 
-                return combined    # 時間欄位交給 insert_data_from_df 處理. 清空快取也那時候處理
+                return combined    # 清空快取 insert_date 再處理
             else:
                 conn.execute(text("DELETE FROM cache"))
-                conn.commit()
-                df["played_at"] = process_datetime_for_sql(df["played_at"], type = "datetime")
-                df["release_date"] = process_datetime_for_sql(df["release_date"], type = "date")
                 combined.to_sql("cache", conn, if_exists="append", index=False)
+                print(f" Cache 更新：新增 {new_data.shape[0]} 筆，總計 {combined.shape[0]} 筆")
                 return False
 
     except Exception as e:
@@ -202,6 +207,7 @@ def postgres_upsert(table, conn, keys, data_iter):
     return len(data_dicts)
 
 
+
 def insert_data_from_df(df: pd.DataFrame):
     
     df["played_at"] = process_datetime_for_sql(df["played_at"], type = "datetime")
@@ -216,11 +222,13 @@ def insert_data_from_df(df: pd.DataFrame):
             for table_name in ["albums", "artists", "tracks", "track_artists", "logs"]:
               start = time.time()
               tables[table_name].to_sql(table_name, conn, if_exists="append", index=False, method = postgres_upsert)
-              print(f"  upsert into {table_name}: {time.time()-start:.2f}s")
+              print(f"   upsert into {table_name}: {time.time()-start:.2f}s")
 
             start = time.time()
             conn.execute(text("DELETE FROM cache"))
-            print(f"清空 cache: {time.time()-start:.2f}s")
+            cache_to_keep = df.nlargest(1, 'played_at')
+            cache_to_keep.to_sql("cache", conn, if_exists="append", index=False)
+            print(f"更新 cache: {time.time()-start:.2f}s")
 
     except Exception as e:
         print(f"寫入 {table_name} 發生資料庫錯誤: {e}")
