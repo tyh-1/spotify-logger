@@ -29,4 +29,4 @@ should_update = sqlite_utils.should_update_db(df)
 print(f"⏱️ should_update_db: {time.time()-start:.2f}s")
 if should_update is not False:
     print(f"📊 準備 flush {should_update.shape[0]} 筆資料到 main tables")
-    sqlite_utils.insert_data_from_df(df)
+    sqlite_utils.insert_data_from_df(should_update)
