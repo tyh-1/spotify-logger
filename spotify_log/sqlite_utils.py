@@ -212,7 +212,7 @@ def insert_data_from_df(df: pd.DataFrame):
     
     df["played_at"] = process_datetime_for_sql(df["played_at"], type = "datetime")
     df["release_date"] = process_datetime_for_sql(df["release_date"], type = "date")
-    
+    df = df.sort_values(by='played_at').reset_index(drop=True)
     tables = split_df(df)
 
     try:
