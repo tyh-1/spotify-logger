@@ -64,8 +64,8 @@ def create_tables_if_not_exists():
     # 方便用，不符合 atomic
     conn.execute(text("""
     CREATE TABLE IF NOT EXISTS cache (
-      artist TEXT NOT NULL,   -- 逗號分隔的
-      artist_id TEXT NOT NULL,
+      artist TEXT[] NOT NULL,   -- array
+      artist_id TEXT[] NOT NULL,
       track TEXT NOT NULL,
       track_id TEXT NOT NULL,
       album TEXT,
@@ -116,8 +116,6 @@ def split_df(df: pd.DataFrame):
     # 4. artists. 違反 atomic, 先 explode 後，再去除重覆
     df_artists = df[["artist_id", "artist"]].copy()
     df_artists = df_artists.rename(columns = {"artist_id": "id"})
-    df_artists["id"] = df_artists["id"].str.split(",").apply(lambda x: [i.strip() for i in x])
-    df_artists["artist"] = df_artists["artist"].str.split(",").apply(lambda x: [i.strip() for i in x])
     df_artists = df_artists.explode(['id', 'artist'])
 
     df_artists = df_artists[df_artists['id'].astype(bool)]
@@ -126,7 +124,6 @@ def split_df(df: pd.DataFrame):
 
     # 5. track_artists. 
     df_track_artists = df[["track_id", "artist_id"]].copy()
-    df_track_artists["artist_id"] = df_track_artists["artist_id"].str.split(",").apply(lambda x: [i.strip() for i in x])
     df_track_artists = df_track_artists.explode("artist_id")
     df_track_artists = df_track_artists[df_track_artists["artist_id"].astype(bool)]    # 去除可能的空字串 row
     df_track_artists = df_track_artists.drop_duplicates(["track_id", "artist_id"])

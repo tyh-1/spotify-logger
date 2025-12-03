@@ -34,8 +34,8 @@ def get_spotify_items(url, access_token):
 def parse_track(item):
     t = item["track"]
     return {
-        "artist": ", ".join(a["name"] for a in t["artists"]),
-        "artist_id": ", ".join(a["id"] for a in t["artists"]),
+        "artist": [a["name"] for a in t["artists"]],
+        "artist_id": [a["id"] for a in t["artists"]],
         "track": t["name"],
         "track_id": t["id"],
         "album": t["album"]["name"],
