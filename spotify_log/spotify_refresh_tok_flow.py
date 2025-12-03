@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 
 import config
+from spotify_log.parser import parse_track
 
 CONFIG = config.get_config()
 CLIENT_ID     = CONFIG["client_id"]
@@ -20,32 +21,6 @@ def refresh_access_token(refresh_token: str):
     j = r.json()
     j.setdefault("refresh_token", refresh_token)
     return j
-
-
-def get_spotify_items(url, access_token):
-    r = requests.get(url, headers={"Authorization": f"Bearer {access_token}"},
-                     params={"limit": 50}, timeout=30)
-    if r.status_code == 401:
-        raise PermissionError("401")
-    r.raise_for_status()
-    j = r.json()
-    return j.get("next"), j["items"]
-
-def parse_track(item):
-    t = item["track"]
-    return {
-        "artist": [a["name"] for a in t["artists"]],
-        "artist_id": [a["id"] for a in t["artists"]],
-        "track": t["name"],
-        "track_id": t["id"],
-        "album": t["album"]["name"],
-        "album_id": t["album"]["id"],
-        "total_tracks": t["album"]["total_tracks"],
-        "duration_ms": t["duration_ms"],
-        "played_at": item["played_at"],
-        "track_number": t["track_number"],
-        "release_date": t["album"]["release_date"]
-    }
 
 
 def get_spotify_items(url, access_token):

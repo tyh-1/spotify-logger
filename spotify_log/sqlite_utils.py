@@ -55,6 +55,8 @@ def create_tables_if_not_exists():
       id SERIAL PRIMARY KEY,  
       track_id TEXT NOT NULL,
       played_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+      context_type TEXT,
+      context_uri TXET,
       
       FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
       UNIQUE (track_id, played_at)
@@ -75,6 +77,8 @@ def create_tables_if_not_exists():
       played_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
       track_number INTEGER,
       release_date DATE,
+      context_type TEXT,
+      context_uri TXET,
       PRIMARY KEY (track_id, played_at)
     );
     """))
@@ -101,7 +105,7 @@ def process_datetime_for_sql(s: pd.Series, type):
 def split_df(df: pd.DataFrame):
     """把 df 拆成五個 df: logs, tracks, albums, artists, track_artitsts. 要 insert 進 DB 的"""
     # 1. logs
-    df_logs = df[["track_id", "played_at"]].copy()
+    df_logs = df[["track_id", "played_at", "context_type", "context_uri"]].copy()
 
     # 2. tracks
     df_tracks = df[["track_id", "track", "album_id", "duration_ms", "track_number"]].copy()

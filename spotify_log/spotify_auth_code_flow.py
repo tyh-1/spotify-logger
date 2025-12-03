@@ -8,6 +8,7 @@ import secrets
 import pandas as pd
 
 import config
+from spotify_log.parser import parse_track
 
 CONFIG = config.get_config()
 CLIENT_ID     = CONFIG["client_id"]
@@ -142,21 +143,6 @@ def get_spotify_items(url, access_token):
     j = r.json()
     return j.get("next"), j["items"]
 
-def parse_track(item):
-    t = item["track"]
-    return {
-        "artist": [a["name"] for a in t["artists"]],
-        "artist_id": [a["id"] for a in t["artists"]],
-        "track": t["name"],
-        "track_id": t["id"],
-        "album": t["album"]["name"],
-        "album_id": t["album"]["id"],
-        "total_tracks": t["album"]["total_tracks"],
-        "duration_ms": t["duration_ms"],
-        "played_at": item["played_at"],
-        "track_number": t["track_number"],
-        "release_date": t["album"]["release_date"]
-    }
 
 def fetch_token():
     code = get_code_via_local_server()
@@ -198,4 +184,3 @@ def fetch_recently_played(tok):
 
 if __name__ == "__main__":
     tok = get_valid_token()
-
