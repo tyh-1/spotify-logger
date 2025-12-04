@@ -12,8 +12,8 @@ def parse_track(item):
         "total_tracks": t["album"]["total_tracks"],
         "duration_ms": t["duration_ms"],
         "played_at": item["played_at"],
-        "context_type": item.get("context", {}).get("type"),
-        "context_uri": item.get("context", {}).get("uri"),
+        "context_type": (item.get("context") or {}).get("type"),
+        "context_uri": (item.get("context") or {}).get("uri"),
         "track_number": t["track_number"],
         "release_date": t["album"]["release_date"]
     }
