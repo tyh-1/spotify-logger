@@ -21,8 +21,10 @@ def create_tables_if_not_exists():
     conn.execute(text("""
     CREATE TABLE IF NOT EXISTS artists (
       id TEXT NOT NULL PRIMARY KEY,
-      artist TEXT NOT NULL
+      artist TEXT NOT NULL,
+      genres TEXT[]
     );
+    CREATE INDEX IF NOT EXISTS idx_artists_genres_null ON artists(id) WHERE genres IS NULL;
     """))
 
     conn.execute(text("""
@@ -235,8 +237,33 @@ def insert_data_from_df(df: pd.DataFrame):
         print(f"寫入 {table_name} 發生資料庫錯誤: {e}")
         raise
 
+def get_artists_without_genres() -> list:
+    try:
+        with get_db_connection() as conn:
+            df = pd.read_sql("SELECT id FROM artists WHERE genres IS NULL", conn)
+            return df['id'].tolist()
+    
+    except Exception as e:
+        print(f"查詢 artists 發生錯誤: {e}")
+        raise
 
+def insert_genres_data(genres_df):
+    try:
+        with get_db_connection() as conn:
+            # 先建臨時表
+            genres_df.to_sql('temp_genres', conn, if_exists='replace', index=False)
+            
+            conn.execute(text("""
+                UPDATE artists 
+                SET genres = temp_genres.genres::text[]
+                FROM temp_genres
+                WHERE artists.id = temp_genres.id
+            """))
+            conn.execute(text("DROP TABLE temp_genres"))
 
+    except Exception as e:
+        print(f"更新 genres 發生錯誤: {e}")
+        raise
 
 if __name__ == "__main__":
   pass    

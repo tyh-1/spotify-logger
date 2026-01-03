@@ -119,7 +119,7 @@ def get_valid_token():
     tok = load_token()
     if tok:
         # 檢查是否快過期
-        if time.time() < tok["got_at"] + tok["expires_in"] - 60:
+        if time.time() < tok["got_at"] + tok["expires_in"] - 120:
             return tok  # access_token 還有效
         # 用 refresh_token 拿新的
         new_tok = refresh_access_token(tok["refresh_token"])
@@ -171,7 +171,7 @@ def fetch_recently_played(tok):
             df_batch = pd.DataFrame(parse_track(x) for x in batch)
                
             items.append(df_batch)
-            time.sleep(random.uniform(0, 0.8))
+            time.sleep(0.2)
 
         except PermissionError:
             tok = refresh_access_token(refresh_token)
@@ -181,6 +181,31 @@ def fetch_recently_played(tok):
     return pd.concat(items)
 
 
+def fetch_artist_genres(artist_id_list, tok):
+    access_token = tok["access_token"]
+    url = "https://api.spotify.com/v1/artists"
+    
+    results = []
+
+    for i in range(0, len(artist_id_list), 50):
+        batch = artist_id_list[i:i+50]
+        ids_str = ','.join(batch)
+        
+        r = requests.get(url, headers={"Authorization": f"Bearer {access_token}"},
+                         params={"ids": ids_str}, timeout=30)
+        r.raise_for_status()
+        
+        artists = r.json()['artists']
+        for artist in artists:
+            results.append({
+                'id': artist['id'],
+                'genres': artist['genres']
+            })
+        
+        time.sleep(0.2)
+    
+    return pd.DataFrame(results)
+
 
 if __name__ == "__main__":
-    tok = get_valid_token()
+    pass
